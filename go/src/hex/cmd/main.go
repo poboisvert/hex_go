@@ -1,19 +1,34 @@
 package main
 
 import (
-	"fmt"
+	"hex/internal/adapters/app/api"
 	"hex/internal/adapters/core/arithmetic"
+	"hex/internal/adapters/framework/right/db"
+	"log"
+	"os"
+
+	gRPC "hex/internal/adapters/framework/left/grpc"
 )
 
 func main() {
-	arithAdapter := arithmetic.NewAdapter()
-	result, err := arithAdapter.Addition(1,2)
 
+	// ports
+	var err error
+
+	dbaseDriver := os.Getenv("DB_DRIVER")
+	dsourceName := os.Getenv("DS_NAME")
+
+	dbaseAdapter, err := db.NewAdapter(dbaseDriver, dsourceName)
 	if err != nil {
-		fmt.Print(err)
+		log.Fatalf("Fail DB init")
 	}
+	defer dbaseAdapter.CloseDbConnection()
 
-	fmt.Println(result)
 
 
+	core := arithmetic.NewAdapter()
+	appAdapter := api.NewAdapter(dbaseAdapter, core)
+
+	gRPCAdapter := gRPC.NewAdapter(appAdapter)
+	gRPCAdapter.Run()
 }
